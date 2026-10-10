@@ -28,3 +28,11 @@ models/adapters/
 
 # Training logs
 logs/
+
+# Frontend
+node_modules/
+.next/
+playwright-report/
+test-results/
+.env*.local
+*.tsbuildinfo

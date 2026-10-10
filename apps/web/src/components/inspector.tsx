@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Check, CheckCheck, ChevronRight, FileSearch, RotateCcw, X } from "lucide-react";
 import type { Decision, Entry, Family } from "@/lib/contracts";
-import { amount, date, display, humanize, SIGNALS } from "@/lib/format";
+import { amount, date, display, humanize, sourceName, SIGNALS } from "@/lib/format";
 
 export function Inspector({
   entry,
@@ -161,7 +161,7 @@ function InspectorContent({
               <dl>
                 <dt>Decision sources</dt>
                 <dd>
-                  {prediction.decided_by.split("+").map(humanize).join(", ") || "Not reported"}
+                  {prediction.decided_by.split("+").map(sourceName).join(", ") || "Not reported"}
                 </dd>
                 <dt>Model version</dt>
                 <dd>{prediction.model_version}</dd>

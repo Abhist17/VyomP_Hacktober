@@ -831,6 +831,129 @@ h1 {
   padding: 7px 23px 7px 9px;
   border-radius: 5px;
 }
+.voucher-mix {
+  margin: 0 0 28px;
+  padding: 18px 20px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.voucher-mix h2 {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--sage);
+  font-weight: 600;
+}
+.voucher-mix ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 28px;
+}
+.voucher-mix button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 190px) minmax(0, 1fr) 36px;
+  align-items: center;
+  gap: 12px;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  padding: 5px 6px;
+  color: var(--ivory);
+  font-size: 11px;
+  text-align: left;
+}
+.voucher-mix button.active {
+  background: var(--gold-wash);
+  color: var(--gold);
+}
+.mix-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mix-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-soft);
+  overflow: hidden;
+}
+.mix-bar span {
+  display: block;
+  height: 100%;
+  background: var(--gold);
+}
+.mix-count {
+  text-align: right;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.voucher-mix p {
+  margin: 8px 6px 0;
+  color: var(--muted);
+  font-size: 10px;
+}
+.review-tools {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 0 15px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 10px;
+}
+.review-tools kbd {
+  display: inline-block;
+  min-width: 18px;
+  padding: 1px 5px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--ivory);
+  font: inherit;
+  text-align: center;
+}
+.evaluation p {
+  margin: 0 0 10px;
+}
+.evaluation-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+.evaluation-table th,
+.evaluation-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-soft);
+  text-align: left;
+  white-space: nowrap;
+}
+.evaluation-table th {
+  color: var(--muted);
+  font-weight: 500;
+}
+.evaluation-table .numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.evaluation-table .selected-row td {
+  color: var(--gold);
+}
+.evaluation-table .sample-tag {
+  margin-left: 8px;
+}
+@media (max-width: 700px) {
+  .voucher-mix ul {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .voucher-mix button {
+    grid-template-columns: minmax(0, 140px) minmax(0, 1fr) 30px;
+  }
+}
 .filter-tabs {
   display: flex;
   gap: 18px;

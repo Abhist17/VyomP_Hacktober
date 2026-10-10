@@ -16,18 +16,22 @@ salary_bank_transfer = "Salary / Payroll"
 sez_or_deemed_export = "Export"
 
 [decision]
-# Auto-accept rows at or above this confidence; tune on the gold dev split for >= 98% precision.
-auto_accept_threshold = 0.90
+# Fitted by `viveka tune-fusion` on the gold dev split (reports/tune/tune.json): the lowest
+# cut-off that keeps dev precision of auto-accepted rows at >= 99.5%. Rows below it, or with
+# more than one label in the prediction set, go to review.
+auto_accept_threshold = 0.96
 # Target coverage of the prediction set (conformal once fitted; top-p mass until then).
-coverage = 0.95
+coverage = 0.96
 temperature = 1.0
+# linear: weighted mean of source distributions; log: weighted geometric mean (tuned on dev).
+pooling = "log"
 # `fast` mode: rows whose cheap opinions agree at or above this confidence skip the SLM.
 fast_threshold = 0.90
 
 [opinions]
-# Fusion weights per opinion source. Missing sources are skipped.
+# Fusion weights per opinion source (tuned on dev). Missing sources are skipped.
 rules = 1.0
-slm = 2.0
+slm = 1.0
 sentinel = 1.0
 precedents = 1.0
 

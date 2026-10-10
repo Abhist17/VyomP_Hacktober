@@ -1,27 +1,36 @@
 "use client";
 
 import { useState } from "react";
-import { AlertCircle, Download, FileJson, FileSpreadsheet, ScrollText } from "lucide-react";
+import {
+  AlertCircle,
+  Download,
+  FileCode2,
+  FileJson,
+  FileSpreadsheet,
+  ScrollText,
+} from "lucide-react";
 import { Dialog } from "./ui";
 import { statusOf, type Decisions, type Entry } from "@/lib/contracts";
-import { downloadResults } from "@/lib/export";
+import { downloadResults, type ExportFormat } from "@/lib/export";
 
 export function ExportDialog({
   source,
   entries,
   filtered,
   decisions,
+  company,
   onClose,
   onExport,
 }: {
   source: string;
+  company: string | null;
   entries: Entry[];
   filtered: Entry[];
   decisions: Decisions;
   onClose: () => void;
   onExport: (count: number) => void;
 }) {
-  const [format, setFormat] = useState<"csv" | "json" | "audit">("csv");
+  const [format, setFormat] = useState<ExportFormat>("csv");
   const [scope, setScope] = useState("all");
   const chosen =
     scope === "filtered"
@@ -58,6 +67,12 @@ export function ExportDialog({
               name: "Full decision trail",
               description: "JSON with source fields, evidence and your reviews",
               Icon: ScrollText,
+            },
+            {
+              id: "tally",
+              name: "TallyPrime XML",
+              description: "Voucher headers ready to import and post in TallyPrime",
+              Icon: FileCode2,
             },
           ] as const
         ).map(({ id, name, description, Icon }) => (
@@ -107,7 +122,7 @@ export function ExportDialog({
           className="button primary"
           disabled={!chosen.length}
           onClick={() => {
-            downloadResults(source, chosen, decisions, format);
+            downloadResults(source, chosen, decisions, format, company);
             onExport(chosen.length);
             onClose();
           }}

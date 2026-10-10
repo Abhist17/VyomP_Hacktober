@@ -10,8 +10,69 @@ import {
   Server,
   SlidersHorizontal,
 } from "lucide-react";
+import { z } from "zod";
 import type { Family, ModelCard, WorkbenchData } from "@/lib/contracts";
-import { display, humanize } from "@/lib/format";
+import { display, humanize, sourceName } from "@/lib/format";
+
+const evaluationSchema = z.object({
+  split: z.string(),
+  rows: z.number(),
+  selected: z.string(),
+  results: z.array(
+    z.object({
+      name: z.string(),
+      description: z.string(),
+      accuracy: z.number(),
+      macro_f1: z.number(),
+      auto_accept_precision: z.number().nullable(),
+      auto_accept_coverage: z.number().nullable(),
+    }),
+  ),
+});
+
+const percent = (value: number | null) => (value == null ? "—" : `${(value * 100).toFixed(1)}%`);
+
+function Evaluation({ value }: { value: unknown }) {
+  if (value == null) return <>No evaluation has been published by this backend.</>;
+  const parsed = evaluationSchema.safeParse(value);
+  if (!parsed.success) return <>{display(value)}</>;
+  const { split, rows, selected, results } = parsed.data;
+  return (
+    <div className="evaluation">
+      <p>
+        Held-out split <code>{split}</code>, {rows.toLocaleString("en-IN")} transactions never seen
+        in training.
+      </p>
+      <div className="table-scroll">
+        <table className="evaluation-table">
+          <thead>
+            <tr>
+              <th>Configuration</th>
+              <th className="numeric">Accuracy</th>
+              <th className="numeric">Macro-F1</th>
+              <th className="numeric">Auto-accept precision</th>
+              <th className="numeric">Auto-accepted</th>
+            </tr>
+          </thead>
+          <tbody>
+            {results.map((result) => (
+              <tr key={result.name} className={result.name === selected ? "selected-row" : ""}>
+                <td>
+                  <strong>{result.description}</strong>
+                  {result.name === selected && <span className="sample-tag">In use</span>}
+                </td>
+                <td className="numeric">{percent(result.accuracy)}</td>
+                <td className="numeric">{percent(result.macro_f1)}</td>
+                <td className="numeric">{percent(result.auto_accept_precision)}</td>
+                <td className="numeric">{percent(result.auto_accept_coverage)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 
 const descriptions: Record<string, string> = {
   "Money movements": "Transfers, settlements and adjustments between accounts.",
@@ -209,16 +270,14 @@ export function ServiceInfo({
               <dt>Sources used in this ledger</dt>
               <dd>
                 {sources.length
-                  ? sources.map(humanize).join(", ")
+                  ? sources.map(sourceName).join(", ")
                   : "Import a ledger to see the sources used."}
               </dd>
             </div>
             <div>
               <dt>Published evaluation</dt>
               <dd>
-                {model.evaluation == null
-                  ? "No evaluation has been published by this backend."
-                  : display(model.evaluation)}
+                <Evaluation value={model.evaluation} />
               </dd>
             </div>
           </dl>

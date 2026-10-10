@@ -68,7 +68,14 @@ guarantee that computation already started by FastAPI will stop.
 - Inspect explanations, supporting evidence, alternatives, source fields and decision traces.
 - Confirm or correct a voucher, advance to another uncertain entry, and undo a review.
 - Inspect column mapping, the 27 voucher families and current backend configuration.
-- Export CSV, the minimal classification JSON contract, or the full JSON audit trail.
+- Export CSV, the minimal classification JSON contract, the full JSON audit trail, or TallyPrime
+  XML voucher headers. Labels without a Tally equivalent import as their nearest base type
+  (Import as Purchase, Export as Sales, Expense as Journal); the Viveka label, confidence and
+  review status travel in the narration. Ledger allocations are completed in TallyPrime.
+- See the voucher mix of the loaded ledger and click a type to filter by it.
+- In the review queue, confirm every suggestion at 90% confidence or more in one step, or
+  review from the keyboard: J and K move through the list, A accepts the suggestion.
+- See the held-out evaluation the backend publishes (`docs/evaluation.json`) on the service page.
 - Handle unsupported / empty files, unavailable services, malformed responses and timeouts.
 - Preserve the existing workspace when another import fails or is cancelled.
 

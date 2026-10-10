@@ -46,6 +46,8 @@ import { ExportDialog } from "./export-dialog";
 type View = "ledger" | "review" | "mapping" | "guide" | "service";
 type Modal = "import" | "export" | "company" | "help" | null;
 const PAGE_SIZE = 12;
+// Review-queue entries at or above this confidence can be confirmed in one step.
+const BULK_CONFIDENCE = 0.9;
 const navigation = [
   { id: "ledger", name: "Workspace", Icon: LayoutDashboard },
   { id: "review", name: "Review queue", Icon: ListChecks },
@@ -108,6 +110,11 @@ export default function Workbench() {
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [decisions]);
+  useEffect(() => {
+    if (!notice) return;
+    const timer = window.setTimeout(() => setNotice(null), 6000);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
 
   const entries = useMemo(() => (data ? entriesOf(data) : []), [data]);
   const needsReview = entries.filter(
@@ -138,6 +145,18 @@ export default function Workbench() {
   const nextReview = entries.find(
     ({ row, prediction }) =>
       row.row_id !== selected && statusOf(prediction, decisions) === "review",
+  );
+  const mix = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const { prediction } of entries) {
+      const label = labelOf(prediction, decisions);
+      counts.set(label, (counts.get(label) ?? 0) + 1);
+    }
+    return [...counts].sort((a, b) => b[1] - a[1]);
+  }, [entries, decisions]);
+  const confident = entries.filter(
+    ({ prediction }) =>
+      statusOf(prediction, decisions) === "review" && prediction.confidence >= BULK_CONFIDENCE,
   );
 
   async function load(nextSource: File | "sample", perspective = "") {
@@ -217,6 +236,51 @@ export default function Workbench() {
     );
     if (nextReview) setSelected(nextReview.row.row_id);
   }
+  function confirmConfident() {
+    const reviewedAt = new Date().toISOString();
+    setDecisions((current) => {
+      const next = { ...current };
+      for (const { prediction } of confident)
+        next[prediction.row_id] = { label: prediction.voucher_type, reviewed_at: reviewedAt };
+      return next;
+    });
+    setNotice(
+      `${confident.length} suggestions at ${Math.round(BULK_CONFIDENCE * 100)}% confidence or more confirmed. Undo any of them from its details.`,
+    );
+  }
+  // Keyboard review: J / K move through the visible list, A accepts the suggestion.
+  const keyState = useRef({ visible, selected, selectedEntry, modal, decide, inspect });
+  useEffect(() => {
+    keyState.current = { visible, selected, selectedEntry, modal, decide, inspect };
+  });
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      const state = keyState.current;
+      const target = event.target as HTMLElement | null;
+      if (
+        state.modal ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.altKey ||
+        target?.closest("input, textarea, select, [contenteditable='true'], dialog")
+      )
+        return;
+      const key = event.key.toLowerCase();
+      if (key === "j" || key === "k") {
+        if (!state.visible.length) return;
+        const at = state.visible.findIndex(({ row }) => row.row_id === state.selected);
+        const step = key === "j" ? 1 : -1;
+        const next = Math.min(state.visible.length - 1, Math.max(0, at + step));
+        state.inspect(state.visible[at === -1 ? 0 : next].row.row_id);
+        event.preventDefault();
+      } else if (key === "a" && state.selectedEntry) {
+        state.decide(state.selectedEntry.prediction.voucher_type);
+        event.preventDefault();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
   function undo() {
     if (selected == null) return;
     setDecisions((current) => {
@@ -435,6 +499,37 @@ export default function Workbench() {
                     <small>{reviewed} reviewed by you</small>
                   </button>
                 </div>
+                {view === "ledger" && mix.length > 0 && (
+                  <section className="voucher-mix" aria-label="Voucher mix">
+                    <h2>Voucher mix</h2>
+                    <ul>
+                      {mix.slice(0, 8).map(([label, count]) => (
+                        <li key={label}>
+                          <button
+                            className={type === label ? "active" : ""}
+                            aria-pressed={type === label}
+                            onClick={() => {
+                              setType(type === label ? "" : label);
+                              setPage(1);
+                            }}
+                          >
+                            <span className="mix-label">{label}</span>
+                            <span className="mix-bar" aria-hidden="true">
+                              <span style={{ width: `${(count / mix[0][1]) * 100}%` }} />
+                            </span>
+                            <span className="mix-count">{count.toLocaleString("en-IN")}</span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                    {mix.length > 8 && (
+                      <p>
+                        +{mix.length - 8} more voucher {mix.length - 8 === 1 ? "type" : "types"} in
+                        the filter.
+                      </p>
+                    )}
+                  </section>
+                )}
                 <div className="ledger-heading">
                   <div>
                     <h2>{view === "review" ? "Review queue" : "Transactions"}</h2>
@@ -493,6 +588,19 @@ export default function Workbench() {
                         ))}
                       </select>
                     </div>
+                    {view === "review" && (
+                      <div className="review-tools">
+                        <span>
+                          <kbd>J</kbd> <kbd>K</kbd> move · <kbd>A</kbd> accept suggestion
+                        </span>
+                        {confident.length > 0 && (
+                          <button className="button secondary small" onClick={confirmConfident}>
+                            <CheckCheck size={15} />
+                            Confirm {confident.length} at ≥ {Math.round(BULK_CONFIDENCE * 100)}%
+                          </button>
+                        )}
+                      </div>
+                    )}
                     {view !== "review" && (
                       <div
                         className="filter-tabs"
@@ -764,6 +872,7 @@ export default function Workbench() {
           entries={entries}
           filtered={filtered}
           decisions={decisions}
+          company={data.company.name}
           onClose={() => setModal(null)}
           onExport={(count) =>
             setNotice(`${count} entries exported with your current classifications.`)

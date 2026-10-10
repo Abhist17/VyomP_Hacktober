@@ -7,7 +7,7 @@ import {
   type Entry,
   type WorkbenchData,
 } from "../src/lib/contracts";
-import { exportContent } from "../src/lib/export";
+import { exportContent, tallyType } from "../src/lib/export";
 import { validateFile, MAX_FILE_SIZE } from "../src/lib/api";
 
 const entry: Entry = {
@@ -116,6 +116,22 @@ describe("human review and export", () => {
     expect(csv).toContain('"A ""credit note"""');
     expect(csv).toContain('"0.7"');
     expect(csv.startsWith("\uFEFF")).toBe(true);
+  });
+  it("maps final labels to TallyPrime voucher types and escapes XML", () => {
+    const xml = exportContent(
+      [{ ...entry, row: { ...entry.row, party: "A & B <Traders>" } }],
+      decisions,
+      "tally",
+      "Kaveri & Co",
+    );
+    expect(xml).toContain('<VOUCHER VCHTYPE="Debit Note" ACTION="Create">');
+    expect(xml).toContain("<DATE>20260912</DATE>");
+    expect(xml).toContain("<VOUCHERNUMBER>CN/8</VOUCHERNUMBER>");
+    expect(xml).toContain("<PARTYLEDGERNAME>A &amp; B &lt;Traders&gt;</PARTYLEDGERNAME>");
+    expect(xml).toContain("<SVCURRENTCOMPANY>Kaveri &amp; Co</SVCURRENTCOMPANY>");
+    expect(xml).toContain("Viveka: Purchase Return / Debit Note (70%, corrected)");
+    expect(tallyType("Export")).toBe("Sales");
+    expect(tallyType("Contra")).toBe("Contra");
   });
 });
 

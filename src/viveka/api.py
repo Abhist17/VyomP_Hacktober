@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+import os
 import tempfile
 from pathlib import Path
 from typing import Annotated, Any
@@ -25,6 +27,20 @@ _SAMPLE_CANDIDATES = (
     Path.cwd() / "examples" / "sample_transactions.csv",
 )
 
+# Held-out test results written by `viveka tune-fusion --evaluation`, shown on the model card.
+_EVALUATION_CANDIDATES = (
+    Path(__file__).resolve().parents[2] / "docs" / "evaluation.json",
+    Path.cwd() / "docs" / "evaluation.json",
+)
+
+
+def _evaluation() -> dict[str, Any] | None:
+    env = os.environ.get("VIVEKA_EVALUATION")
+    paths = (Path(env),) if env else _EVALUATION_CANDIDATES
+    path = next((p for p in paths if p.is_file()), None)
+    return json.loads(path.read_text(encoding="utf-8")) if path else None
+
+
 app = FastAPI(title="Viveka", version=__version__)
 POLICY = load_policy()
 
@@ -44,9 +60,10 @@ def _frame(rows: list[dict[str, Any]]) -> pd.DataFrame:
 
 async def _read_upload(file: UploadFile) -> pd.DataFrame:
     suffix = Path(file.filename or "upload.xlsx").suffix
-    with tempfile.NamedTemporaryFile(suffix=suffix) as tmp:
+    # Close before reading: Windows cannot reopen a NamedTemporaryFile that is still open.
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete_on_close=False) as tmp:
         tmp.write(await file.read())
-        tmp.flush()
+        tmp.close()
         try:
             return read_rows(tmp.name)
         except ValueError as exc:
@@ -108,7 +125,7 @@ def model_card() -> dict[str, Any]:
         "viveka_version": __version__,
         "policy_version": POLICY.version,
         "slm": POLICY.slm,
-        "evaluation": None,
+        "evaluation": _evaluation(),
     }
 
 

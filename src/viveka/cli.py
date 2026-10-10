@@ -154,6 +154,80 @@ def _pull_model(args: argparse.Namespace) -> int:
     return 0
 
 
+def _scored(split: str, cache: Path | None, sources):
+    import numpy as np
+
+    from viveka.io import read_rows
+    from viveka.pipeline import prepare
+    from viveka.synth import split_files
+    from viveka.tune import Scored, collect
+
+    path = cache / f"{Path(split).name}.npz" if cache else None
+    if path and path.is_file():
+        data = np.load(path)
+        cards = [c for book, _ in split_files(split) for c in prepare(read_rows(book))[1]]
+        ops = {k.removeprefix("op_"): data[k] for k in data.files if k.startswith("op_")}
+        print(f"{split}: opinions from {path}", file=sys.stderr)
+        return Scored(ops, data["gold"], cards, data["heldout"])
+    started = time.perf_counter()
+    scored = collect(split, sources)
+    print(f"{split}: scored in {time.perf_counter() - started:.0f}s", file=sys.stderr)
+    if path:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        scored.save(path)
+    return scored
+
+
+def _tune_fusion(args: argparse.Namespace) -> int:
+    import json
+
+    from viveka.models.rules import RulesOpinion
+    from viveka.models.sentinel import DEFAULT_PATH, Sentinel
+    from viveka.models.slm import SLMAdjudicator
+    from viveka.policy import default_policy_path, load_policy
+    from viveka.tune import evaluation_card, tune, write_policy
+
+    policy_path = Path(args.policy) if args.policy else default_policy_path()
+    policy = load_policy(policy_path)
+    sources = [
+        RulesOpinion(policy),
+        Sentinel(
+            policy.sentinel.get("path", DEFAULT_PATH), policy.sentinel.get("embedder", "tfidf")
+        ),
+        SLMAdjudicator(policy.slm),
+    ]
+    sources = [s for s in sources if s.available()]
+    cache = Path(args.cache) if args.cache else None
+    dev = _scored(args.dev, cache, sources)
+    test = _scored(args.test, cache, sources) if args.test else None
+    report = tune(dev, test, policy, args.target_precision)
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "tune.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
+    for c in report["configs"]:
+        t = c.get("test", c["dev"])
+        print(
+            f"{c['description']:<28} acc {t['accuracy']:.4f} · macro-F1 {t['macro_f1']:.4f} · "
+            f"auto-accept {t['auto_accept_coverage']:.1%} at {t['auto_accept_precision'] or 0:.1%}",
+            file=sys.stderr,
+        )
+    print(f"chosen: {report['chosen']}", file=sys.stderr)
+    if args.evaluation and test is not None:
+        labels = {
+            "rules": "Rules only",
+            "sentinel": "Sentinel classifier only",
+            "slm": "Fine-tuned Qwen3-1.7B only",
+            "fused-before": "Fusion, hand-set weights",
+            "fused-tuned": "Fusion, tuned on dev (in use)",
+        }
+        card = evaluation_card(report, Path(args.test).as_posix(), len(test.gold), labels)
+        Path(args.evaluation).write_text(json.dumps(card, indent=2) + "\n", encoding="utf-8")
+    if args.write_policy:
+        write_policy(policy_path, report["chosen"])
+        print(f"-> {policy_path}", file=sys.stderr)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="viveka", description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -215,6 +289,17 @@ def build_parser() -> argparse.ArgumentParser:
     n.add_argument("--out", default="models/weights/sentinel.joblib")
     n.add_argument("--embedder", default="tfidf", help="tfidf or a sentence-transformers id")
     n.set_defaults(func=_train_sentinel)
+
+    f = sub.add_parser("tune-fusion", help="Fit fusion weights and thresholds on gold dev")
+    f.add_argument("dev", help="Labelled dev split (fit)")
+    f.add_argument("--test", help="Labelled test split (report only)")
+    f.add_argument("--policy")
+    f.add_argument("--cache", help="Directory to save / reuse per-source opinions")
+    f.add_argument("--out", default="reports/tune")
+    f.add_argument("--target-precision", type=float, default=0.99)
+    f.add_argument("--evaluation", help="Write the model-card evaluation JSON here")
+    f.add_argument("--write-policy", action="store_true", help="Save the chosen values")
+    f.set_defaults(func=_tune_fusion)
 
     b = sub.add_parser("bench", help="Benchmark each opinion source and the fusion")
     b.add_argument("split_dir")

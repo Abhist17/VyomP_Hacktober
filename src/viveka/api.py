@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+import os
 import tempfile
 from pathlib import Path
 from typing import Annotated, Any
@@ -24,6 +26,20 @@ _SAMPLE_CANDIDATES = (
     Path(__file__).resolve().parents[2] / "examples" / "sample_transactions.csv",
     Path.cwd() / "examples" / "sample_transactions.csv",
 )
+
+# Held-out test results written by `viveka tune-fusion --evaluation`, shown on the model card.
+_EVALUATION_CANDIDATES = (
+    Path(__file__).resolve().parents[2] / "docs" / "evaluation.json",
+    Path.cwd() / "docs" / "evaluation.json",
+)
+
+
+def _evaluation() -> dict[str, Any] | None:
+    env = os.environ.get("VIVEKA_EVALUATION")
+    paths = (Path(env),) if env else _EVALUATION_CANDIDATES
+    path = next((p for p in paths if p.is_file()), None)
+    return json.loads(path.read_text(encoding="utf-8")) if path else None
+
 
 app = FastAPI(title="Viveka", version=__version__)
 POLICY = load_policy()
@@ -109,7 +125,7 @@ def model_card() -> dict[str, Any]:
         "viveka_version": __version__,
         "policy_version": POLICY.version,
         "slm": POLICY.slm,
-        "evaluation": None,
+        "evaluation": _evaluation(),
     }
 
 

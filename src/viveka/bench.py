@@ -98,9 +98,16 @@ def bench(
             "rows": len(gold),
             "accuracy": m["accuracy"],
             "macro_f1": m["macro_f1"],
+            "macro_precision": m["per_class"]["macro avg"]["precision"],
+            "macro_recall": m["per_class"]["macro avg"]["recall"],
             "accuracy_seen_templates": _share(~heldout, correct),
             "accuracy_heldout_templates": _share(heldout, correct),
             "confusable_pairs": m["confusable_pairs"],
+            "per_class": {
+                k: {"precision": v["precision"], "recall": v["recall"], "f1": v["f1-score"]}
+                for k, v in m["per_class"].items()
+                if k in present
+            },
             "per_class_f1": {k: v["f1-score"] for k, v in m["per_class"].items() if k in present},
             "seconds": round(seconds, 2),
             "rows_per_second": round(len(gold) / seconds, 2) if seconds else None,
@@ -130,17 +137,18 @@ def write_bench(report: dict, out_dir: str | Path) -> Path:
         f"Split `{report['split']}`, {len(report['files'])} files, policy "
         f"`{report['policy_version']}`, {report['created_at']}.",
         "",
-        "| Config | Accuracy | Macro-F1 | Seen templates | Held-out templates | Rows/s "
-        "| SLM rows |",
-        "|---|---|---|---|---|---|---|",
+        "| Config | Accuracy | Macro-F1 | Macro-P | Macro-R | Seen templates "
+        "| Held-out templates | Rows/s | SLM rows |",
+        "|---|---|---|---|---|---|---|---|---|",
     ]
     ok = {k: v for k, v in report["results"].items() if "skipped" not in v}
     for name, r in report["results"].items():
         if "skipped" in r:
-            lines.append(f"| {name} | skipped: {r['skipped']} | | | | | |")
+            lines.append(f"| {name} | skipped: {r['skipped']} | | | | | | | |")
             continue
         lines.append(
             f"| {name} | {_pct(r['accuracy'])} | {_pct(r['macro_f1'])} | "
+            f"{_pct(r.get('macro_precision'))} | {_pct(r.get('macro_recall'))} | "
             f"{_pct(r['accuracy_seen_templates'])} | {_pct(r['accuracy_heldout_templates'])} | "
             f"{r['rows_per_second']} | {r['slm_rows']} |"
         )

@@ -25,3 +25,12 @@ models/adapters/
 .DS_Store
 .playwright-mcp/
 .ipynb_checkpoints/
+
+# Next.js frontend
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+.env*.local
+playwright-report/
+test-results/

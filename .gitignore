@@ -15,6 +15,7 @@ data/*
 outputs/
 reports/
 models/weights/
+models/adapters/
 *.gguf
 *.safetensors
 *.faiss

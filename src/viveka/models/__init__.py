@@ -7,6 +7,7 @@ from typing import Protocol
 
 import numpy as np
 
+from viveka.context import Context
 from viveka.signals import EvidenceCard
 
 
@@ -16,5 +17,8 @@ class OpinionSource(Protocol):
     def available(self) -> bool: ...
 
     def score(
-        self, cards: Sequence[EvidenceCard], rows: Sequence[Mapping[str, object]]
+        self,
+        cards: Sequence[EvidenceCard],
+        rows: Sequence[Mapping[str, object]],
+        ctx: Context,
     ) -> np.ndarray: ...

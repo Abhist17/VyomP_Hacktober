@@ -19,6 +19,7 @@ from viveka.labels import LABELS
 from viveka.models import OpinionSource
 from viveka.models.precedents import PrecedentMemory
 from viveka.models.rules import RulesOpinion
+from viveka.models.sentinel import DEFAULT_PATH as DEFAULT_SENTINEL_PATH
 from viveka.models.sentinel import Sentinel
 from viveka.models.slm import SLMAdjudicator
 from viveka.normalise import is_blank, parse_amount, parse_date
@@ -59,7 +60,51 @@ def _doc_number(value: object) -> str | None:
 
 
 def default_sources(policy: Policy) -> list[OpinionSource]:
-    return [RulesOpinion(policy), SLMAdjudicator(policy.slm), Sentinel(), PrecedentMemory()]
+    sentinel = Sentinel(
+        policy.sentinel.get("path", DEFAULT_SENTINEL_PATH),
+        policy.sentinel.get("embedder", "tfidf"),
+    )
+    return [RulesOpinion(policy), sentinel, SLMAdjudicator(policy.slm), PrecedentMemory()]
+
+
+# Sources that cost real compute per row; `fast` mode runs them only where needed.
+EXPENSIVE = frozenset({"slm"})
+
+
+def gather_opinions(
+    sources: list[OpinionSource],
+    cards: list[EvidenceCard],
+    rows: list[dict[str, object]],
+    ctx: Context,
+    policy: Policy,
+    mode: str,
+) -> tuple[dict[str, np.ndarray], np.ndarray]:
+    """Score every row with the cheap sources, and with the expensive ones per the mode.
+
+    `accurate` and `deliberate` run every source on every row. `fast` runs expensive sources
+    only on rows where the cheap opinions are unsure (top probability below
+    `fast_threshold`) or disagree; elsewhere the cheap consensus stands in for them.
+    Returns the opinions and a boolean mask of rows the expensive sources actually scored.
+    """
+    cheap = [s for s in sources if s.name not in EXPENSIVE]
+    heavy = [s for s in sources if s.name in EXPENSIVE]
+    opinions = {s.name: s.score(cards, rows, ctx) for s in cheap}
+    escalate = np.ones(len(cards), dtype=bool)
+    if not heavy:
+        return opinions, np.zeros(len(cards), dtype=bool)
+    stand_in = None
+    if mode == "fast" and opinions:
+        stand_in = fuse(opinions, policy)
+        top = stand_in.argmax(axis=1)
+        agree = np.all([o.argmax(axis=1) == top for o in opinions.values()], axis=0)
+        escalate = ~((stand_in.max(axis=1) >= policy.fast_threshold) & agree)
+    idx = np.flatnonzero(escalate)
+    for s in heavy:
+        full = stand_in.copy() if stand_in is not None else np.zeros((len(cards), len(LABELS)))
+        if len(idx):
+            full[idx] = s.score([cards[i] for i in idx], [rows[i] for i in idx], ctx)
+        opinions[s.name] = full
+    return opinions, escalate
 
 
 @dataclass
@@ -71,6 +116,20 @@ class Run:
     cards: list[EvidenceCard]
     context: Context
     mappings: list[Mapping]
+
+
+def prepare(
+    df_raw: pd.DataFrame,
+    company_gstin: str | None = None,
+    company_name: str | None = None,
+    own_accounts: Iterable[str] = (),
+) -> tuple[list[dict[str, object]], list[EvidenceCard], Context, list[Mapping]]:
+    """Align, normalise, resolve whose books, and build the evidence cards."""
+    canonical, mappings = to_canonical(df_raw)
+    rows = [normalise_row(r) for r in canonical.to_dict(orient="records")]
+    ctx = infer_context(rows, company_gstin, company_name, own_accounts)
+    cards = [build_card(r, ctx) for r in rows]
+    return rows, cards, ctx, mappings
 
 
 def classify(
@@ -99,21 +158,18 @@ def run(
     policy = policy or load_policy()
     sources = [s for s in (sources or default_sources(policy)) if s.available()]
 
-    canonical, mappings = to_canonical(df_raw)
-    rows = [normalise_row(r) for r in canonical.to_dict(orient="records")]
-    ctx = infer_context(rows, company_gstin, company_name, own_accounts)
+    rows, cards, ctx, mappings = prepare(df_raw, company_gstin, company_name, own_accounts)
     if not rows:
         return Run([], [], [], ctx, mappings)
-    cards = [build_card(r, ctx) for r in rows]
 
-    # TODO(block 5): in `fast` mode run the SLM only on rows where the cheap opinions are
-    # uncertain or disagree; in `deliberate` mode escalate low-confidence rows.
-    opinions = {s.name: s.score(cards, rows) for s in sources}
+    opinions, escalated = gather_opinions(sources, cards, rows, ctx, policy, mode)
     fused = fuse(opinions, policy)
-    decided_by = "+".join(opinions)
+    versions = {s.name: getattr(s, "version", s.name) for s in sources}
 
     preds = []
-    for row, card, row_probs in zip(rows, cards, fused, strict=True):
+    for i, (row, card, row_probs) in enumerate(zip(rows, cards, fused, strict=True)):
+        used = [n for n in opinions if n not in EXPENSIVE or escalated[i]]
+        decided_by = "+".join(used)
         probs, notes = apply_guardrails(row_probs, card)
         top = int(np.argmax(probs))
         pset = prediction_set(probs, policy.coverage)
@@ -139,7 +195,7 @@ def run(
                     for s in card.true()
                 ],
                 decided_by=decided_by,
-                model_version=f"viveka-{__version__} / {decided_by}",
+                model_version=f"viveka-{__version__} / " + " + ".join(versions[n] for n in used),
                 policy_version=policy.version,
             )
         )

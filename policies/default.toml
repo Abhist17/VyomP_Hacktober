@@ -21,6 +21,8 @@ auto_accept_threshold = 0.90
 # Target coverage of the prediction set (conformal once fitted; top-p mass until then).
 coverage = 0.95
 temperature = 1.0
+# `fast` mode: rows whose cheap opinions agree at or above this confidence skip the SLM.
+fast_threshold = 0.90
 
 [opinions]
 # Fusion weights per opinion source. Missing sources are skipped.
@@ -30,8 +32,19 @@ sentinel = 1.0
 precedents = 1.0
 
 [slm]
-backend = "llama.cpp"                       # llama.cpp | vllm
-model = "google/gemma-4-E4B-it"
+backend = "transformers"
+model = "Qwen/Qwen3-1.7B"                   # any Hugging Face causal LM with a chat template
 revision = ""                               # pin a Hugging Face revision hash at the final
-gguf_path = "models/weights/gemma-4-E4B-it-Q4_K_M.gguf"
-adapter = ""                                # LoRA adapter path, empty for zero-shot
+adapter = "models/adapters/viveka-qwen3-1.7b"  # LoRA from `viveka train-slm`; zero-shot if absent
+device = "auto"                             # auto | cuda | mps | cpu
+dtype = "auto"                              # auto | bfloat16 | float16 | float32
+load_in_4bit = false                        # NF4 weights on CUDA (needs bitsandbytes)
+label_batch = 9                             # label continuations scored per forward pass
+temperature = 1.0
+zero_shot_calibration = false               # subtract content-free label scores when no adapter
+enabled = true
+allow_download = false                      # false: run only if the weights are already local
+
+[sentinel]
+path = "models/weights/sentinel.joblib"
+embedder = "tfidf"                          # tfidf | a sentence-transformers model id

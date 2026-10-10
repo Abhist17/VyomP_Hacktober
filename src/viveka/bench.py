@@ -60,6 +60,14 @@ def _share(mask: np.ndarray, correct: np.ndarray) -> float | None:
     return float(correct[mask].mean()) if mask.any() else None
 
 
+def _cuda() -> object | None:
+    """torch.cuda when a GPU is in use, without importing torch for CPU-only benches."""
+    import sys
+
+    torch = sys.modules.get("torch")
+    return torch.cuda if torch is not None and torch.cuda.is_available() else None
+
+
 def bench(
     split_dir: str | Path,
     policy: Policy,
@@ -83,12 +91,16 @@ def bench(
             results[cfg.name] = {"skipped": "source not available"}
             continue
         preds, slm_rows = [], 0
+        if cuda := _cuda():
+            cuda.reset_peak_memory_stats()
         started = time.perf_counter()
         for raw, _ in books:
             r = run(raw, policy, mode=cfg.mode, sources=sources)
             preds += [p.voucher_type for p in r.predictions]
             slm_rows += sum("slm" in p.decided_by.split("+") for p in r.predictions)
         seconds = time.perf_counter() - started
+        cuda = _cuda()
+        peak_vram = round(cuda.max_memory_allocated() / 2**20) if cuda else None
         m = label_metrics(gold["Voucher Type"], pd.Series(preds))
         correct = gold["Voucher Type"].to_numpy() == np.array(preds)
         present = set(m["confusion_matrix"]["labels"])
@@ -98,13 +110,22 @@ def bench(
             "rows": len(gold),
             "accuracy": m["accuracy"],
             "macro_f1": m["macro_f1"],
+            "macro_precision": m["per_class"]["macro avg"]["precision"],
+            "macro_recall": m["per_class"]["macro avg"]["recall"],
             "accuracy_seen_templates": _share(~heldout, correct),
             "accuracy_heldout_templates": _share(heldout, correct),
             "confusable_pairs": m["confusable_pairs"],
+            "per_class": {
+                k: {"precision": v["precision"], "recall": v["recall"], "f1": v["f1-score"]}
+                for k, v in m["per_class"].items()
+                if k in present
+            },
             "per_class_f1": {k: v["f1-score"] for k, v in m["per_class"].items() if k in present},
+            "confusion_matrix": m["confusion_matrix"],
             "seconds": round(seconds, 2),
             "rows_per_second": round(len(gold) / seconds, 2) if seconds else None,
             "slm_rows": slm_rows,
+            "peak_vram_mib": peak_vram,
         }
     return {
         "viveka_version": __version__,
@@ -130,17 +151,18 @@ def write_bench(report: dict, out_dir: str | Path) -> Path:
         f"Split `{report['split']}`, {len(report['files'])} files, policy "
         f"`{report['policy_version']}`, {report['created_at']}.",
         "",
-        "| Config | Accuracy | Macro-F1 | Seen templates | Held-out templates | Rows/s "
-        "| SLM rows |",
-        "|---|---|---|---|---|---|---|",
+        "| Config | Accuracy | Macro-F1 | Macro-P | Macro-R | Seen templates "
+        "| Held-out templates | Rows/s | SLM rows |",
+        "|---|---|---|---|---|---|---|---|---|",
     ]
     ok = {k: v for k, v in report["results"].items() if "skipped" not in v}
     for name, r in report["results"].items():
         if "skipped" in r:
-            lines.append(f"| {name} | skipped: {r['skipped']} | | | | | |")
+            lines.append(f"| {name} | skipped: {r['skipped']} | | | | | | | |")
             continue
         lines.append(
             f"| {name} | {_pct(r['accuracy'])} | {_pct(r['macro_f1'])} | "
+            f"{_pct(r.get('macro_precision'))} | {_pct(r.get('macro_recall'))} | "
             f"{_pct(r['accuracy_seen_templates'])} | {_pct(r['accuracy_heldout_templates'])} | "
             f"{r['rows_per_second']} | {r['slm_rows']} |"
         )

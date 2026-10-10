@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+.ruff_cache/
+.hypothesis/
+build/
+dist/
+
+# Data and artefacts: the provided Excel and anything derived from it stay local
+data/*
+!data/.gitkeep
+outputs/
+reports/
+models/weights/
+*.gguf
+*.safetensors
+*.faiss
+
+# Tooling
+.env
+.DS_Store
+.playwright-mcp/
+.ipynb_checkpoints/

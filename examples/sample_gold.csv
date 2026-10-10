@@ -1,0 +1,19 @@
+Invoice No,Voucher Type
+KF/S/101,Sales
+NM/882,Purchase
+RNT/09,Expense
+CN/2026/018,Sales Return / Credit Note
+PAY/551,Payment
+CTR/12,Contra
+SAL/09-26/E104,Salary / Payroll
+ATT/09-26/E104,Attendance
+PO/77,Purchase Order
+IMP/3321,Import
+KF/E/12,Export
+DC/45,Delivery Note
+GRN/88,Receipt Note
+JV/03,Journal
+ADV/07,Advance / Prepayment
+SJ/02,Stock Journal
+PS/01,Physical Stock
+JW/MO/5,Material Out

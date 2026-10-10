@@ -1,0 +1,63 @@
+[project]
+name = "viveka"
+version = "0.1.0"
+description = "Open-source voucher intelligence for VYOM+: classifies transaction rows into 27 accounting voucher types with an open-weight SLM."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy>=1.26",
+    "pandas>=2.2",
+    "python-calamine>=0.2",
+    "openpyxl>=3.1",
+    "pydantic>=2.7",
+    "rapidfuzz>=3.9",
+    "scikit-learn>=1.5",
+]
+
+[project.optional-dependencies]
+# CPU serving of the SLM adjudicator (GGUF, grammar-constrained decoding).
+llm-cpu = ["llama-cpp-python>=0.3"]
+# GPU serving (XGrammar structured outputs, prefix caching, multi-LoRA).
+llm-gpu = ["vllm>=0.6"]
+# Sentinel, precedent memory, conformal sets.
+ml = [
+    "lightgbm>=4.3",
+    "mapie>=0.9",
+    "sentence-transformers>=3.0",
+    "faiss-cpu>=1.8",
+]
+# Weak supervision label model.
+weak = ["snorkel>=0.10"]
+# QLoRA fine-tuning (run on Kaggle/Colab GPU).
+train = ["unsloth", "trl", "peft", "datasets"]
+profile = ["polars>=1.0", "duckdb>=1.0"]
+api = ["fastapi>=0.115", "uvicorn[standard]>=0.30", "python-multipart>=0.0.9"]
+ui = ["streamlit>=1.38"]
+
+[dependency-groups]
+dev = ["pytest>=8.0", "hypothesis>=6.100", "faker>=25.0", "ruff>=0.5"]
+
+[project.scripts]
+viveka = "viveka.cli:main"
+
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/viveka"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/viveka/schema.py" = ["E501"]  # one synonym row per canonical field

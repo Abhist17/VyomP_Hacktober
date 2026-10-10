@@ -10,33 +10,17 @@ import {
   Server,
   SlidersHorizontal,
 } from "lucide-react";
-import { z } from "zod";
+import { parseEvaluation } from "@/lib/evaluation";
 import type { Family, ModelCard, WorkbenchData } from "@/lib/contracts";
 import { display, humanize, sourceName } from "@/lib/format";
-
-const evaluationSchema = z.object({
-  split: z.string(),
-  rows: z.number(),
-  selected: z.string(),
-  results: z.array(
-    z.object({
-      name: z.string(),
-      description: z.string(),
-      accuracy: z.number(),
-      macro_f1: z.number(),
-      auto_accept_precision: z.number().nullable(),
-      auto_accept_coverage: z.number().nullable(),
-    }),
-  ),
-});
 
 const percent = (value: number | null) => (value == null ? "—" : `${(value * 100).toFixed(1)}%`);
 
 function Evaluation({ value }: { value: unknown }) {
   if (value == null) return <>No evaluation has been published by this backend.</>;
-  const parsed = evaluationSchema.safeParse(value);
-  if (!parsed.success) return <>{display(value)}</>;
-  const { split, rows, selected, results } = parsed.data;
+  const parsed = parseEvaluation(value);
+  if (!parsed) return <>{display(value)}</>;
+  const { split, rows, selected, results } = parsed;
   return (
     <div className="evaluation">
       <p>

@@ -44,9 +44,10 @@ def _frame(rows: list[dict[str, Any]]) -> pd.DataFrame:
 
 async def _read_upload(file: UploadFile) -> pd.DataFrame:
     suffix = Path(file.filename or "upload.xlsx").suffix
-    with tempfile.NamedTemporaryFile(suffix=suffix) as tmp:
+    # Close before reading: Windows cannot reopen a NamedTemporaryFile that is still open.
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete_on_close=False) as tmp:
         tmp.write(await file.read())
-        tmp.flush()
+        tmp.close()
         try:
             return read_rows(tmp.name)
         except ValueError as exc:

@@ -75,6 +75,21 @@ precision of auto-accepted rows at 99.5%. Against the hand-set fusion it is more
 sends far fewer rows to review (24.9% instead of 56.5%) while the auto-accepted rows are
 *more* precise.
 
+### End-to-end check and run modes
+
+`viveka bench data/synth/test --only fused fused-fast` runs the real pipeline (alignment,
+context, all three sources, fusion, guardrails) on the same 800 rows with the tuned policy. It
+reproduces the tuned figures exactly, so the cached-opinion tuning matches production.
+
+| Mode | Accuracy | Macro-F1 | Macro-precision | Unseen templates | Rows the SLM scored | Rows/s | Peak VRAM |
+|---|---|---|---|---|---|---|---|
+| `accurate` (default) | 91.2% | 90.9% | 92.7% | 83.7% | 800 | 1.33 | 4.5 GB |
+| `fast` | 88.0% | 87.6% | 91.1% | 77.1% | 200 | 5.29 | 4.4 GB |
+
+`fast` sends only the rows where rules and sentinel disagree or are unsure to the SLM: a
+quarter of the rows, four times the throughput, 3.2 points of accuracy. Timings include
+loading the model once, on the RTX 4050 laptop GPU.
+
 ### Fusion search on dev
 
 `viveka tune-fusion` tries linear and log pooling with every weight in {0, 0.25, 0.5, 1} per

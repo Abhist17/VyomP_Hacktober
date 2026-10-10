@@ -171,7 +171,7 @@ def fit_threshold(dev: Scored, choice: Choice, target: float) -> float:
     return 0.99
 
 
-def tune(dev: Scored, test: Scored | None, policy: Policy, target_precision: float = 0.99) -> dict:
+def tune(dev: Scored, test: Scored | None, policy: Policy, target_precision: float = 0.995) -> dict:
     ranked = search(dev)
     best = ranked[0][2]
     best.temperature = fit_temperature(dev, best)
@@ -263,7 +263,12 @@ def write_policy(path: str | Path, chosen: Mapping) -> None:
     for line in lines:
         stripped = line.strip()
         if stripped.startswith("[") and stripped.endswith("]"):
-            out += _missing(section, updates, seen)
+            # New keys go after the section's last value, before its trailing blank lines.
+            blanks = 0
+            while out and not out[-1].strip():
+                out.pop()
+                blanks += 1
+            out += _missing(section, updates, seen) + [""] * blanks
             section = stripped.strip("[]")
         key = stripped.split("=", 1)[0].strip() if "=" in stripped else None
         if key and (section, key) in updates and not stripped.startswith("#"):
@@ -279,5 +284,5 @@ def write_policy(path: str | Path, chosen: Mapping) -> None:
 
 def _missing(section: str, updates: Mapping, seen: set) -> list[str]:
     new = [f"{k} = {v}" for (s, k), v in updates.items() if s == section and (s, k) not in seen]
-    seen.update((section, line.split(" = ")[0]) for line in new)
+    seen.update((section, k) for (s, k) in updates if s == section)
     return new

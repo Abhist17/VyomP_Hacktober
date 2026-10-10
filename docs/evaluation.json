@@ -1,0 +1,48 @@
+{
+  "split": "data/synth/test",
+  "rows": 800,
+  "selected": "fused-tuned",
+  "created_at": "2026-10-10T11:01:39+00:00",
+  "results": [
+    {
+      "name": "rules",
+      "description": "Rules only",
+      "accuracy": 0.7725,
+      "macro_f1": 0.7627440553482736,
+      "auto_accept_precision": 0.8200757575757576,
+      "auto_accept_coverage": 0.66
+    },
+    {
+      "name": "sentinel",
+      "description": "Sentinel classifier only",
+      "accuracy": 0.84625,
+      "macro_f1": 0.8406663561551928,
+      "auto_accept_precision": 0.9881796690307328,
+      "auto_accept_coverage": 0.52875
+    },
+    {
+      "name": "slm",
+      "description": "Fine-tuned Qwen3-1.7B only",
+      "accuracy": 0.87625,
+      "macro_f1": 0.8646561959435951,
+      "auto_accept_precision": 0.9385307346326837,
+      "auto_accept_coverage": 0.83375
+    },
+    {
+      "name": "fused-before",
+      "description": "Fusion, hand-set weights",
+      "accuracy": 0.905,
+      "macro_f1": 0.8993520765912264,
+      "auto_accept_precision": 0.9655172413793104,
+      "auto_accept_coverage": 0.435
+    },
+    {
+      "name": "fused-tuned",
+      "description": "Fusion, tuned on dev (in use)",
+      "accuracy": 0.9125,
+      "macro_f1": 0.9088930937245687,
+      "auto_accept_precision": 0.9717138103161398,
+      "auto_accept_coverage": 0.75125
+    }
+  ]
+}

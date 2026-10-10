@@ -296,7 +296,7 @@ def build_parser() -> argparse.ArgumentParser:
     f.add_argument("--policy")
     f.add_argument("--cache", help="Directory to save / reuse per-source opinions")
     f.add_argument("--out", default="reports/tune")
-    f.add_argument("--target-precision", type=float, default=0.99)
+    f.add_argument("--target-precision", type=float, default=0.995)
     f.add_argument("--evaluation", help="Write the model-card evaluation JSON here")
     f.add_argument("--write-policy", action="store_true", help="Save the chosen values")
     f.set_defaults(func=_tune_fusion)

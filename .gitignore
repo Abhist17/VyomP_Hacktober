@@ -25,3 +25,6 @@ models/adapters/
 .DS_Store
 .playwright-mcp/
 .ipynb_checkpoints/
+
+# Training logs
+logs/

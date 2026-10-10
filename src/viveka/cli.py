@@ -218,7 +218,7 @@ def _tune_fusion(args: argparse.Namespace) -> int:
             "sentinel": "Sentinel classifier only",
             "slm": "Fine-tuned Qwen3-1.7B only",
             "fused-before": "Fusion, hand-set weights",
-            "fused-tuned": "Fusion, tuned on dev (in use)",
+            "fused-tuned": "Fusion, tuned on dev",
         }
         card = evaluation_card(report, Path(args.test).as_posix(), len(test.gold), labels)
         Path(args.evaluation).write_text(json.dumps(card, indent=2) + "\n", encoding="utf-8")

@@ -38,7 +38,7 @@
     },
     {
       "name": "fused-tuned",
-      "description": "Fusion, tuned on dev (in use)",
+      "description": "Fusion, tuned on dev",
       "accuracy": 0.9125,
       "macro_f1": 0.9088930937245687,
       "auto_accept_precision": 0.9717138103161398,

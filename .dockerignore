@@ -9,3 +9,14 @@ outputs
 reports
 models/weights
 tests
+
+# Frontend dependencies, build output and local configuration
+**/node_modules
+**/.next
+**/playwright-report
+**/test-results
+.playwright-mcp
+.env
+**/.env
+.env*.local
+**/.env*.local

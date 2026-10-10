@@ -2,9 +2,30 @@
 
 > **Hacktober Fest 2026 · Open Source AI Hackathon, organised by Elevate**
 > **Problem Statement 4:** VYOM+ Intelligent Voucher Classification Using Open-Source LLMs
-> **Qualifier submission:** as the rules require, this repository contains only this README. Implementation happens at the final hackathon.
+> **Implementation:** the classification pipeline, FastAPI backend, training tools and a React / Next.js frontend are now included. The architecture below records the original proposal; see [frontend setup and current capabilities](docs/FRONTEND.md) for the shipped web app.
 
 **विवेक (viveka)** is Sanskrit for *discernment*: the ability to tell apart things that look alike. Viveka reads structured transaction data and picks the right accounting voucher for every row. Is it a Purchase or a Sales voucher? Contra or Payment? Credit Note or Rejection In? It answers by reasoning over the whole transaction with an open-weight language model, and it explains every decision.
+
+## Run the web app
+
+Start the API from the repository root (Python 3.12+):
+
+```bash
+python -m pip install -e ".[api]"
+viveka serve --host 127.0.0.1 --port 8000
+```
+
+In a second terminal (Node 22.12+ or 24):
+
+```bash
+cd apps/web
+npm ci
+npm run dev
+```
+
+Open the URL printed by Next.js. The app connects to the backend on port 8000 by default.
+Use the sample ledger or upload Excel, CSV, JSON or JSONL. Review uncertain classifications
+and export your final decisions. [Configuration, tests and limitations](docs/FRONTEND.md).
 
 ## Contents
 

@@ -1,0 +1,16 @@
+:root {
+  --ink: #080808;
+  --surface: #12110f;
+  --raised: #232017;
+  --input: #0c0b09;
+  --gold: #edb52d;
+  --gold-wash: #241d0c;
+  --ivory: #f3efe2;
+  --muted: #aaa396;
+  --sage: #c0b99f;
+  --green: #b7c698;
+  --red: #e0a393;
+  --border: #332e24;
+  --border-soft: #25221c;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+}

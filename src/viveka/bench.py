@@ -60,6 +60,14 @@ def _share(mask: np.ndarray, correct: np.ndarray) -> float | None:
     return float(correct[mask].mean()) if mask.any() else None
 
 
+def _cuda() -> object | None:
+    """torch.cuda when a GPU is in use, without importing torch for CPU-only benches."""
+    import sys
+
+    torch = sys.modules.get("torch")
+    return torch.cuda if torch is not None and torch.cuda.is_available() else None
+
+
 def bench(
     split_dir: str | Path,
     policy: Policy,
@@ -83,12 +91,16 @@ def bench(
             results[cfg.name] = {"skipped": "source not available"}
             continue
         preds, slm_rows = [], 0
+        if cuda := _cuda():
+            cuda.reset_peak_memory_stats()
         started = time.perf_counter()
         for raw, _ in books:
             r = run(raw, policy, mode=cfg.mode, sources=sources)
             preds += [p.voucher_type for p in r.predictions]
             slm_rows += sum("slm" in p.decided_by.split("+") for p in r.predictions)
         seconds = time.perf_counter() - started
+        cuda = _cuda()
+        peak_vram = round(cuda.max_memory_allocated() / 2**20) if cuda else None
         m = label_metrics(gold["Voucher Type"], pd.Series(preds))
         correct = gold["Voucher Type"].to_numpy() == np.array(preds)
         present = set(m["confusion_matrix"]["labels"])
@@ -109,9 +121,11 @@ def bench(
                 if k in present
             },
             "per_class_f1": {k: v["f1-score"] for k, v in m["per_class"].items() if k in present},
+            "confusion_matrix": m["confusion_matrix"],
             "seconds": round(seconds, 2),
             "rows_per_second": round(len(gold) / seconds, 2) if seconds else None,
             "slm_rows": slm_rows,
+            "peak_vram_mib": peak_vram,
         }
     return {
         "viveka_version": __version__,

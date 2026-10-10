@@ -27,6 +27,25 @@ Open the URL printed by Next.js. The app connects to the backend on port 8000 by
 Use the sample ledger or upload Excel, CSV, JSON or JSONL. Review uncertain classifications
 and export your final decisions. [Configuration, tests and limitations](docs/FRONTEND.md).
 
+## Results
+
+Held-out test split: 800 rows from 4 companies that never appear in training, half of them
+from transaction templates the models never saw. Every choice was fitted on a separate dev
+split first (`viveka tune-fusion`). Full tables, method and remaining errors:
+[docs/RESULTS.md](docs/RESULTS.md).
+
+| Configuration | Accuracy | Macro-F1 | Seen templates | Unseen templates | Auto-accepted | Precision of auto-accepted |
+|---|---|---|---|---|---|---|
+| Qwen3-1.7B zero-shot (no adapter) | 19.8% | 16.7% | 21.4% | 18.1% | | |
+| Rules only | 77.3% | 76.3% | 84.1% | 70.4% | 66.0% | 82.0% |
+| Sentinel only | 84.6% | 84.1% | 98.8% | 70.4% | 52.9% | 98.8% |
+| Fine-tuned Qwen3-1.7B only | 87.6% | 86.5% | 95.3% | 79.9% | 83.4% | 93.9% |
+| Fusion, hand-set weights | 90.5% | 89.9% | 97.0% | 83.9% | 43.5% | 96.6% |
+| **Fusion, tuned on dev (in use)** | **91.3%** | **90.9%** | **98.8%** | 83.7% | **75.1%** | **97.2%** |
+
+The fine-tuned adapter was trained with QLoRA on one 6 GB RTX 4050 laptop GPU in 3 h 06 min.
+All data is synthetic, from `viveka synth`, because the organisers' dataset was not available.
+
 ## Contents
 
 1. [Problem](#1-problem)

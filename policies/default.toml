@@ -1,0 +1,37 @@
+# Viveka labelling policy. Firm-specific conventions live here, not in code or weights.
+# Every report embeds the version below. Change conventions without retraining.
+version = "policy-2026-10-10"
+
+[perspective]
+# inferred: company found from recurring GSTIN / name in the file
+# profile: company passed with --company-gstin / --company-name
+whose_books = "inferred"
+
+[conventions]
+# A paid expense bill (e.g. electricity bill paid by UPI): "Expense" or "Payment"
+paid_expense_bill = "Expense"
+# A salary bank transfer: "Salary / Payroll" or "Payment"
+salary_bank_transfer = "Salary / Payroll"
+# Supply to an SEZ or a deemed export: "Export" or "Sales"
+sez_or_deemed_export = "Export"
+
+[decision]
+# Auto-accept rows at or above this confidence; tune on the gold dev split for >= 98% precision.
+auto_accept_threshold = 0.90
+# Target coverage of the prediction set (conformal once fitted; top-p mass until then).
+coverage = 0.95
+temperature = 1.0
+
+[opinions]
+# Fusion weights per opinion source. Missing sources are skipped.
+rules = 1.0
+slm = 2.0
+sentinel = 1.0
+precedents = 1.0
+
+[slm]
+backend = "llama.cpp"                       # llama.cpp | vllm
+model = "google/gemma-4-E4B-it"
+revision = ""                               # pin a Hugging Face revision hash at the final
+gguf_path = "models/weights/gemma-4-E4B-it-Q4_K_M.gguf"
+adapter = ""                                # LoRA adapter path, empty for zero-shot

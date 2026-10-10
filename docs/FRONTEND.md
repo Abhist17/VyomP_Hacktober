@@ -129,6 +129,22 @@ Dialogs use the native modal element for focus containment, Escape and focus res
 Visible focus, descriptive icon labels and reduced-motion preferences are supported. Motion
 is limited to brief press feedback and the indeterminate loading indicator.
 
+### Motion
+
+The landing page follows vyomplus.in: a gold coin that turns as you scroll, wide-tracked gold
+eyebrows over serif headlines, text panels on alternating sides and a gold progress line along
+the bottom. The coin is our own, drawn in SVG and stacked in CSS 3D (`components/coin.tsx`),
+engraved with विवेक on the front and the 27-voucher legend on the back. It turns half a turn per
+chapter, so every chapter rests on a face. Five chapters (introduction, problem, method, proof,
+begin) have a chapter rail on the right; the proof chapter counts up the held-out evaluation the
+backend publishes, so the numbers on the page are the backend's own.
+
+Reveals clip and lift text rather than fading it, so contrast never dips below WCAG AA mid-way
+(the axe check runs on the landing page). The workspace uses the same language: the page title
+lifts in on every view, metrics count up once, ledger rows and the inspector slide in, voucher-mix
+bars grow, and a turning coin marks classification in progress. `prefers-reduced-motion` turns
+all of it off and shows everything in place.
+
 ## Verification
 
 ```bash

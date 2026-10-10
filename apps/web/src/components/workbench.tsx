@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { z } from "zod";
 import {
   AlertCircle,
@@ -17,7 +17,6 @@ import {
   HelpCircle,
   LayoutDashboard,
   ListChecks,
-  LoaderCircle,
   Plus,
   RefreshCw,
   Search,
@@ -37,6 +36,9 @@ import {
   type WorkbenchData,
 } from "@/lib/contracts";
 import { amount, date, display } from "@/lib/format";
+import { parseEvaluation } from "@/lib/evaluation";
+import { CountUp, ScrollProgress } from "./motion";
+import { Coin } from "./coin";
 import { Brand, Dialog, StatusBadge } from "./ui";
 import { Welcome, FileIntake } from "./intake";
 import { Inspector } from "./inspector";
@@ -293,6 +295,7 @@ export default function Workbench() {
 
   return (
     <div className={`app-shell ${data ? "has-ledger" : ""}`}>
+      <ScrollProgress />
       <a className="skip-link" href="#main-content">
         Skip to content
       </a>
@@ -350,7 +353,7 @@ export default function Workbench() {
         >
           {busy && (
             <div className="loading-banner" role="status">
-              <LoaderCircle className="spin" size={21} />
+              <Coin className="coin-mini" />
               <div>
                 <strong>Reading and classifying your ledger…</strong>
                 <p>Larger files and local models can take a few minutes.</p>
@@ -399,10 +402,10 @@ export default function Workbench() {
                 checking={checking}
               />
             ) : !data ? (
-              <Welcome onLoad={requestLoad} />
+              <Welcome onLoad={requestLoad} evaluation={parseEvaluation(model?.evaluation)} />
             ) : (
               <>
-                <div className="page-heading">
+                <div className="page-heading enter" key={view}>
                   <div>
                     <span className="page-context">
                       {view === "review"
@@ -470,7 +473,9 @@ export default function Workbench() {
                       <FileSpreadsheet size={16} />
                       Transactions
                     </span>
-                    <strong>{entries.length.toLocaleString("en-IN")}</strong>
+                    <strong>
+                      <CountUp value={entries.length} duration={700} />
+                    </strong>
                     <small>In this ledger</small>
                   </button>
                   <button className="metric-review" onClick={() => navigate("review")}>
@@ -478,7 +483,9 @@ export default function Workbench() {
                       <AlertCircle size={16} />
                       Need your review
                     </span>
-                    <strong>{needsReview.toLocaleString("en-IN")}</strong>
+                    <strong>
+                      <CountUp value={needsReview} duration={700} />
+                    </strong>
                     <small>
                       {needsReview
                         ? "Your judgement makes the difference"
@@ -495,7 +502,9 @@ export default function Workbench() {
                       <CheckCheck size={16} />
                       Ready to export
                     </span>
-                    <strong>{ready.toLocaleString("en-IN")}</strong>
+                    <strong>
+                      <CountUp value={ready} duration={700} />
+                    </strong>
                     <small>{reviewed} reviewed by you</small>
                   </button>
                 </div>
@@ -639,10 +648,11 @@ export default function Workbench() {
                             </tr>
                           </thead>
                           <tbody>
-                            {visible.map(({ row, prediction }) => (
+                            {visible.map(({ row, prediction }, index) => (
                               <tr
                                 key={row.row_id}
-                                className={selected === row.row_id ? "selected-row" : ""}
+                                className={`row-in ${selected === row.row_id ? "selected-row" : ""}`}
+                                style={{ "--i": index } as CSSProperties}
                                 onClick={() => inspect(row.row_id)}
                               >
                                 <td>
@@ -750,6 +760,7 @@ export default function Workbench() {
                     </div>
                   </section>
                   <Inspector
+                    key={selected ?? "none"}
                     entry={selectedEntry}
                     families={families}
                     decision={selected != null ? decisions[selected] : undefined}

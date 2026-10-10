@@ -48,11 +48,12 @@ test("corrections update review counts and export without rewriting original con
 }) => {
   await sample(page);
   await page.getByRole("button", { name: /Review queue/ }).click();
-  await expect(page.locator(".transactions-table tbody tr")).toHaveCount(4);
+  // Rules-only mode (SLM off, no local sentinel) under the tuned 0.96 auto-accept cut-off.
+  await expect(page.locator(".transactions-table tbody tr")).toHaveCount(9);
   await page.getByRole("button", { name: "Inspect CN/2026/018", exact: true }).click();
   await page.getByLabel("Final voucher type").selectOption("Purchase Return / Debit Note");
   await page.getByRole("button", { name: "Save correction" }).click();
-  await expect(page.locator(".transactions-table tbody tr")).toHaveCount(3);
+  await expect(page.locator(".transactions-table tbody tr")).toHaveCount(8);
   await page.getByRole("button", { name: "Export results", exact: true }).click();
   await page.getByRole("radio", { name: /Full decision trail/ }).check();
   const downloadPromise = page.waitForEvent("download");

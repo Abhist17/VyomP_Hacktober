@@ -5,7 +5,8 @@ export function amount(row: LedgerRow) {
     return row.quantity != null ? `${row.quantity} ${row.unit || "units"}` : "—";
   const currency = row.currency || "INR";
   try {
-    return new Intl.NumberFormat("en-IN", {
+    // Lakh grouping for rupees; international grouping for foreign currencies.
+    return new Intl.NumberFormat(currency === "INR" ? "en-IN" : "en-US", {
       style: "currency",
       currency,
       maximumFractionDigits: 2,
@@ -25,8 +26,17 @@ export function date(value: LedgerRow["date"]) {
     timeZone: "UTC",
   });
 }
+const SOURCE_NAMES: Record<string, string> = {
+  slm: "Language model (SLM)",
+  rules: "Rules",
+  sentinel: "Sentinel classifier",
+  precedents: "Precedents",
+};
 export function humanize(value: string) {
   return value.replace(/_/g, " ").replace(/^./, (char) => char.toUpperCase());
+}
+export function sourceName(value: string) {
+  return SOURCE_NAMES[value] ?? humanize(value);
 }
 export function display(value: unknown): string {
   if (value === null || value === undefined || value === "") return "—";

@@ -32,8 +32,10 @@ class Policy:
     auto_accept_threshold: float = 0.90
     coverage: float = 0.95
     temperature: float = 1.0
+    fast_threshold: float = 0.90
     weights: dict[str, float] = field(default_factory=dict)
     slm: dict[str, Any] = field(default_factory=dict)
+    sentinel: dict[str, Any] = field(default_factory=dict)
     raw: dict[str, Any] = field(default_factory=dict, repr=False)
 
     def weight(self, source: str) -> float:
@@ -54,7 +56,9 @@ def load_policy(path: str | Path | None = None) -> Policy:
         auto_accept_threshold=float(dec.get("auto_accept_threshold", 0.90)),
         coverage=float(dec.get("coverage", 0.95)),
         temperature=float(dec.get("temperature", 1.0)),
+        fast_threshold=float(dec.get("fast_threshold", 0.90)),
         weights={k: float(v) for k, v in data.get("opinions", {}).items()},
         slm=dict(data.get("slm", {})),
+        sentinel=dict(data.get("sentinel", {})),
         raw=data,
     )

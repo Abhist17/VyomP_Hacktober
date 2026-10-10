@@ -79,28 +79,17 @@ def join(pred: pd.DataFrame, gold: pd.DataFrame) -> tuple[pd.DataFrame, str]:
     return gold.merge(pred, on="row_id", suffixes=("_gold", "_pred")), "row_id"
 
 
-def evaluate(pred_path: str | Path, gold_path: str | Path) -> dict:
-    pred, gold = load_predictions(pred_path), load_gold(gold_path)
-    merged, key = join(pred, gold)
-    y_true, y_pred = merged["voucher_type_gold"], merged["voucher_type_pred"]
+def label_metrics(y_true: pd.Series, y_pred: pd.Series) -> dict:
+    """Accuracy, F1s, per-class table, confusion matrix and the confusable-pair scoreboard."""
+    y_true, y_pred = pd.Series(list(y_true)), pd.Series(list(y_pred))
     present = [label for label in LABELS if label in set(y_true) | set(y_pred)]
-
     pairs = {}
     for name, members in CONFUSABLE_PAIRS.items():
         mask = y_true.isin(members)
         n = int(mask.sum())
         errors = int((y_true[mask] != y_pred[mask]).sum())
         pairs[name] = {"rows": n, "errors": errors, "error_rate": errors / n if n else None}
-
     return {
-        "viveka_version": __version__,
-        "created_at": datetime.now(UTC).isoformat(timespec="seconds"),
-        "inputs": {
-            "predictions": {"path": str(pred_path), "sha256": _sha256(Path(pred_path))},
-            "gold": {"path": str(gold_path), "sha256": _sha256(Path(gold_path))},
-        },
-        "join_key": key,
-        "rows": {"gold": len(gold), "predictions": len(pred), "matched": len(merged)},
         "unknown_gold_labels": sorted(set(y_true) - set(LABELS)),
         "accuracy": accuracy_score(y_true, y_pred),
         "macro_f1": f1_score(y_true, y_pred, labels=present, average="macro", zero_division=0),
@@ -115,6 +104,22 @@ def evaluate(pred_path: str | Path, gold_path: str | Path) -> dict:
             "matrix": confusion_matrix(y_true, y_pred, labels=present).tolist(),
         },
         "confusable_pairs": pairs,
+    }
+
+
+def evaluate(pred_path: str | Path, gold_path: str | Path) -> dict:
+    pred, gold = load_predictions(pred_path), load_gold(gold_path)
+    merged, key = join(pred, gold)
+    return {
+        "viveka_version": __version__,
+        "created_at": datetime.now(UTC).isoformat(timespec="seconds"),
+        "inputs": {
+            "predictions": {"path": str(pred_path), "sha256": _sha256(Path(pred_path))},
+            "gold": {"path": str(gold_path), "sha256": _sha256(Path(gold_path))},
+        },
+        "join_key": key,
+        "rows": {"gold": len(gold), "predictions": len(pred), "matched": len(merged)},
+        **label_metrics(merged["voucher_type_gold"], merged["voucher_type_pred"]),
     }
 
 

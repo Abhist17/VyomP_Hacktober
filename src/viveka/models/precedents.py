@@ -10,6 +10,7 @@ from pathlib import Path
 
 import numpy as np
 
+from viveka.context import Context
 from viveka.signals import EvidenceCard
 
 DEFAULT_PATH = Path("models/weights/precedents.faiss")
@@ -30,7 +31,10 @@ class PrecedentMemory:
         raise NotImplementedError
 
     def score(
-        self, cards: Sequence[EvidenceCard], rows: Sequence[Mapping[str, object]]
+        self,
+        cards: Sequence[EvidenceCard],
+        rows: Sequence[Mapping[str, object]],
+        ctx: Context | None = None,
     ) -> np.ndarray:
         # TODO(block 3): similarity-weighted label vote of the k nearest precedents.
         raise NotImplementedError

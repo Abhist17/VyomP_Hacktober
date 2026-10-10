@@ -10,6 +10,7 @@ from collections.abc import Callable, Mapping, Sequence
 
 import numpy as np
 
+from viveka.context import Context
 from viveka.labels import FALLBACK, LABEL_INDEX, LABELS, PRECEDENCE, RANK
 from viveka.policy import Policy
 from viveka.signals import EvidenceCard
@@ -233,7 +234,10 @@ class RulesOpinion:
         return out
 
     def score(
-        self, cards: Sequence[EvidenceCard], rows: Sequence[Mapping[str, object]]
+        self,
+        cards: Sequence[EvidenceCard],
+        rows: Sequence[Mapping[str, object]],
+        ctx: Context | None = None,
     ) -> np.ndarray:
         if not cards:
             return np.zeros((0, len(LABELS)))

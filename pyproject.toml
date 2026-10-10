@@ -16,21 +16,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# CPU serving of the SLM adjudicator (GGUF, grammar-constrained decoding).
-llm-cpu = ["llama-cpp-python>=0.3"]
-# GPU serving (XGrammar structured outputs, prefix caching, multi-LoRA).
-llm-gpu = ["vllm>=0.6"]
-# Sentinel, precedent memory, conformal sets.
-ml = [
-    "lightgbm>=4.3",
-    "mapie>=0.9",
-    "sentence-transformers>=3.0",
-    "faiss-cpu>=1.8",
-]
-# Weak supervision label model.
-weak = ["snorkel>=0.10"]
-# QLoRA fine-tuning (run on Kaggle/Colab GPU).
-train = ["unsloth", "trl", "peft", "datasets"]
+# SLM adjudicator: label-likelihood scoring with Hugging Face transformers (CPU, CUDA or MPS).
+llm = ["torch>=2.4", "transformers>=4.56", "accelerate>=1.0", "huggingface_hub>=0.25"]
+# LoRA / QLoRA fine-tuning (`viveka train-slm`); bitsandbytes for 4-bit on CUDA.
+train = ["peft>=0.13", "bitsandbytes>=0.44"]
+# Optional embedding sentinel and precedent memory.
+ml = ["sentence-transformers>=3.0", "faiss-cpu>=1.8"]
 profile = ["polars>=1.0", "duckdb>=1.0"]
 api = ["fastapi>=0.115", "uvicorn[standard]>=0.30", "python-multipart>=0.0.9"]
 ui = ["streamlit>=1.38"]
